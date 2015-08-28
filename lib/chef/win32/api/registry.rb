@@ -38,7 +38,43 @@ class Chef
         # );
         safe_attach_function :RegDeleteKeyExW, [ :HKEY, :LPCTSTR, :LONG, :DWORD ], :LONG
         safe_attach_function :RegDeleteKeyExA, [ :HKEY, :LPCTSTR, :LONG, :DWORD ], :LONG
-
+        
+        # LONG WINAPI RegOpenKeyEx(
+        #   _In_     HKEY    hKey,
+        #   _In_opt_ LPCTSTR lpSubKey,
+        #   _In_     DWORD   ulOptions,
+        #   _In_     REGSAM  samDesired,
+        #   _Out_    PHKEY   phkResult
+        # );
+        safe_attach_function :RegOpenKeyExW, [ :HKEY, :LPCTSTR, :DWORD, :ULONG, :PHKEY ], :LONG
+        
+        # LONG WINAPI RegEnumValue(
+        #   _In_        HKEY    hKey,
+        #   _In_        DWORD   dwIndex,
+        #   _Out_       LPTSTR  lpValueName,
+        #   _Inout_     LPDWORD lpcchValueName,
+        #   _Reserved_  LPDWORD lpReserved,
+        #   _Out_opt_   LPDWORD lpType,
+        #   _Out_opt_   LPBYTE  lpData,
+        #   _Inout_opt_ LPDWORD lpcbData
+        # );
+        safe_attach_function :RegEnumValueW, [ :HKEY, :DWORD, :LPTSTR, :LPDWORD, :LPDWORD, :LPDWORD, :LPBYTE, :LPDWORD ], :LONG
+        
+        # LONG WINAPI RegQueryInfoKey(
+        #   _In_        HKEY      hKey,
+        #   _Out_opt_   LPTSTR    lpClass,
+        #   _Inout_opt_ LPDWORD   lpcClass,
+        #   _Reserved_  LPDWORD   lpReserved,
+        #   _Out_opt_   LPDWORD   lpcSubKeys,
+        #   _Out_opt_   LPDWORD   lpcMaxSubKeyLen,
+        #   _Out_opt_   LPDWORD   lpcMaxClassLen,
+        #   _Out_opt_   LPDWORD   lpcValues,
+        #   _Out_opt_   LPDWORD   lpcMaxValueNameLen,
+        #   _Out_opt_   LPDWORD   lpcMaxValueLen,
+        #   _Out_opt_   LPDWORD   lpcbSecurityDescriptor,
+        #   _Out_opt_   PFILETIME lpftLastWriteTime
+        # );
+        safe_attach_function :RegQueryInfoKeyW, [ :HKEY, :LPTSTR, :LPDWORD, :LPDWORD, :LPDWORD, :LPDWORD, :LPDWORD, :LPDWORD, :LPDWORD, :LPDWORD, :LPDWORD, :pointer ], :LONG
       end
     end
   end

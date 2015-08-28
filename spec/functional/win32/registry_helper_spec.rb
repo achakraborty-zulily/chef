@@ -205,7 +205,7 @@ describe 'Chef::Win32::Registry', :windows_only do
   end
 
   describe "get_values" do
-    it "returns all values for a key if it exists" do
+    it "returns all values for a key if it exists", :focus => true do
       values = @registry.get_values("HKCU\\Software\\Root")
       expect(values).to be_an_instance_of Array
       expect(values).to eq([{:name=>"RootType1", :type=>:string, :data=>"fibrous"},

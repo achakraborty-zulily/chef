@@ -22,12 +22,20 @@ require 'win32/api'
 require 'chef/win32/api/registry'
 require 'chef/mixin/wstring'
 
+if RUBY_PLATFORM =~ /mswin|mingw32|windows/
+  require 'win32/registry'
+  require 'win32/api'
+end
+
 class Chef
   class Win32
     class Registry
 
       include Chef::ReservedNames::Win32::API::Registry
       extend Chef::ReservedNames::Win32::API::Registry
+      
+      include Chef::Mixin::WideString
+      extend Chef::Mixin::WideString
 
       include Chef::Mixin::WideString
       extend Chef::Mixin::WideString
@@ -48,9 +56,51 @@ class Chef
       def get_values(key_path)
         hive, key = get_hive_and_key(key_path)
         key_exists!(key_path)
-        values = hive.open(key, ::Win32::Registry::KEY_READ | registry_system_architecture) do |reg|
-          reg.map { |name, type, data| {:name=>name, :type=>get_name_from_type(type), :data=>data} }
+        
+        phkey = FFI::MemoryPointer.new(:ulong)
+        result = RegOpenKeyExW(hive.hkey, wstring(key), 0, ::Win32::Registry::KEY_QUERY_VALUE | registry_system_architecture, phkey)
+        # do something if result != 0
+
+        hkey = phkey.read_ulong
+        values_ptr = FFI::MemoryPointer.new(:uint32)
+        max_value_name_len_ptr = FFI::MemoryPointer.new(:uint32)
+        max_value_len_ptr = FFI::MemoryPointer.new(:uint32)
+        RegQueryInfoKeyW(hkey, nil, nil, nil, nil, nil, nil, values_ptr, max_value_name_len_ptr, max_value_len_ptr, nil, nil)
+
+        values = [ ]
+
+        max_value_name_len = max_value_name_len_ptr.read_uint32 # characters w/o null terminater
+        max_value_len = max_value_len_ptr.read_uint32 # bytes, incl terminaters
+        name_ptr = FFI::MemoryPointer.new(:uint16, max_value_name_len + 1)
+        name_size_ptr = FFI::MemoryPointer.new(:uint32)
+        type_ptr = FFI::MemoryPointer.new(:uint32)
+        data_ptr = FFI::MemoryPointer.new(:uint32, max_value_len)
+        data_size_ptr = FFI::MemoryPointer.new(:uint32)
+        values_ptr.read_uint32.times do |index|
+          name_size_ptr.write_uint32(max_value_name_len + 1)
+          data_size_ptr.write_uint32(max_value_len)
+          
+          RegEnumValueW(hkey, index, name_ptr, name_size_ptr, nil, type_ptr, data_ptr, data_size_ptr)
+          
+          name = name_ptr.read_wstring(name_size_ptr.read_uint32)
+          type = get_name_from_type(type_ptr.read_uint32)
+          data = case type
+                 when :string
+                   data_ptr.read_wstring
+                 when :multi_string
+                   data_ptr.read_array_of_wstring
+                 else
+                   data_ptr.read_bytes(data_size_ptr.read_uint32)
+                 end
+          
+          values << { :name => name, :type => type, :data => data }
         end
+        
+        values
+        
+        # values = hive.open(key, ::Win32::Registry::KEY_READ | registry_system_architecture) do |reg|
+        #   reg.map { |name, type, data| {:name=>name, :type=>get_name_from_type(type), :data=>data} }
+        # end
       end
 
       def set_value(key_path, value)
